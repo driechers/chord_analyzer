@@ -8,7 +8,7 @@ from pprint import pprint
 from graphviz import Digraph
 
 # Can a chord be minor sus or minor aug? how is partially diminished written in chord pro?
-chordRE = "([A-G][#b]{0,1})(maj|m|dim|aug|sus){0,1}([0-9]*)"
+chordRE = "^([A-G][#b]{0,1})(maj|m|dim|aug){0,1}([0-9]*)(sus){0,1}([0-9]*)$"
 
 class Analyzer:
     def __init__(self):
@@ -25,7 +25,11 @@ class Analyzer:
         with open(choFile, 'r') as f:
             for line in f:
                 for match in re.findall("\[.*?\]", line):
-                    self.chords.append(match[1:-1])
+                    chord = match[1:-1]
+                    if re.search(chordRE, chord) is not None:
+                        self.chords.append(chord)
+                    else:
+                        print(chord + " is not a chord")
 
     def __getCounterClock(self, chord):
         """
@@ -125,7 +129,7 @@ class Analyzer:
             if parts[1] == 'maj':
                 strippedChords.append(parts[0])
                 histogram[parts[0]] += 1
-            if parts[1] == 'sus':
+            if parts[3] == 'sus':
                 strippedChords.append(parts[0])
                 histogram[parts[0]] += 1
             if parts[1] == 'm':
@@ -213,6 +217,6 @@ if __name__ == '__main__':
     a = Analyzer()
     a.loadChords(sys.argv[1])
     a.getKey()
-    #a.analyzeChords()
-    #a.normalizeChords()
-    #a.plotModel("model")
+    a.analyzeChords()
+    a.normalizeChords()
+    a.plotModel("model")
