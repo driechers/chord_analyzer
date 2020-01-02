@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 
+import operator
 import sys
 import re
 
@@ -41,6 +42,49 @@ class Analyzer:
 
         return lookupTable[chord]
 
+    def __getSupportingChords(self, key):
+        """
+        This method gets the legal supporting chords for the given key based on the circle of fifths
+        """
+        lookupTable = {
+                'C': ('F', 'Dm', 'C', 'Am', 'G', 'Em'),
+                'Am': ('F', 'Dm', 'C', 'Am', 'G', 'Em'),
+
+                'G': ('C', 'Am', 'G', 'Em', 'D', 'Bm'),
+                'Em': ('C', 'Am', 'G', 'Em', 'D', 'Bm'),
+
+                'D': ('G', 'Em', 'D', 'Bm', 'A', 'F#m'),
+                'Bm': ('G', 'Em', 'D', 'Bm', 'A', 'F#m'),
+
+                'A': ('D', 'Bm', 'A', 'F#m', 'E', 'C#m'),
+                'F#m': ('D', 'Bm', 'A', 'F#m', 'E', 'C#m'),
+
+                'E': ('A', 'F#m', 'E', 'C#m', 'B', 'G#m'),
+                'C#m': ('A', 'F#m', 'E', 'C#m', 'B', 'G#m'),
+
+                'B': ('E', 'C#m', 'B', 'G#m', 'F#', 'Gb', 'Ebm'),
+                'G#m': ('E', 'C#m', 'B', 'G#m', 'F#', 'Gb', 'Ebm'),
+
+                'F#': ('B', 'G#m', 'F#', 'Gb', 'Ebm', 'Db', 'Bbm'),
+                'Gb#': ('B', 'G#m', 'F#', 'Gb', 'Ebm', 'Db', 'Bbm'),
+                'Ebm': ('B', 'G#m', 'F#', 'Gb', 'Ebm', 'Db', 'Bbm'),
+
+                'Db': ('F#', 'Gb', 'Eb', 'Db', 'Bbm', 'Ab', 'Fm'),
+                'Bbm': ('F#', 'Gb', 'Eb', 'Db', 'Bbm', 'Ab', 'Fm'),
+
+                'Ab': ('Db', 'Bbm', 'Ab', 'Fm', 'Eb', 'Cm'),
+                'Fm': ('Db', 'Bbm', 'Ab', 'Fm', 'Eb', 'Cm'),
+
+                'Eb': ('Ab', 'Fm', 'Eb', 'Cm', 'Bb', 'Gm'),
+                'Cm': ('Ab', 'Fm', 'Eb', 'Cm', 'Bb', 'Gm'),
+
+                'Bb': ('Eb', 'Cm', 'Bb', 'Gm', 'F', 'Dm'),
+                'Gm': ('Eb', 'Cm', 'Bb', 'Gm', 'F', 'Dm'),
+
+                'F': ('Bb', 'Gm', 'F', 'Dm', 'C', 'Am'),
+                'Dm': ('Bb', 'Gm', 'F', 'Dm', 'C', 'Am')
+                }
+
     def getKey(self):
         """
         This method determines the key of the chord progression. It works using the following
@@ -62,6 +106,14 @@ class Analyzer:
                 'Db': 0, 'Bbm': 0, 'Ab': 0, 'Fm': 0, 'Eb': 0,
                 'Cm': 0, 'Bb': 0, 'Gm': 0, 'F': 0, 'Dm': 0
                 }
+
+        histogram = {
+                'C': 0, 'Am': 0, 'G': 0, 'Em': 0, 'D': 0,
+                'Bm': 0, 'A': 0, 'F#m': 0, 'E': 0, 'C#m': 0,
+                'B': 0, 'G#m': 0, 'F#': 0, 'Gb': 0, 'Ebm': 0,
+                'Db': 0, 'Bbm': 0, 'Ab': 0, 'Fm': 0, 'Eb': 0,
+                'Cm': 0, 'Bb': 0, 'Gm': 0, 'F': 0, 'Dm': 0
+                }
         # TODO combine Gb and F# votes
 
         strippedChords = []
@@ -69,16 +121,21 @@ class Analyzer:
             parts = re.search(chordRE, chord).groups()
             if parts[1] == None:
                 strippedChords.append(parts[0])
+                histogram[parts[0]] += 1
             if parts[1] == 'maj':
                 strippedChords.append(parts[0])
+                histogram[parts[0]] += 1
             if parts[1] == 'sus':
                 strippedChords.append(parts[0])
+                histogram[parts[0]] += 1
             if parts[1] == 'm':
                 strippedChords.append(parts[0] + parts[1])
+                histogram[parts[0] + parts[1]] += 1
 
             # Look for Dominant 7 chords
             if parts[1] == None and parts[2] == '7':
                 # Cast vote for key one clockwise on circle of fifths
+                # TODO should this really get a vote for each instance of a chord?
                 votes[self.__getCounterClock(parts[0])] += 1
 
         # Cast vote for first note
@@ -89,9 +146,14 @@ class Analyzer:
         if strippedChords[0] == strippedChords[-1]:
             votes[strippedChords[0]] += 1
 
+
+        # TODO cast vote for circle of fifths method
+
+        sortedHistogram = sorted(histogram.items(), key=operator.itemgetter(1), reverse=True)
+        print(sortedHistogram)
+
         print(self.chords)
-        print(strippedChords)
-        pprint(votes)
+        #pprint(votes)
         return max(votes)
 
     def analyzeChords(self):
@@ -135,6 +197,10 @@ class Analyzer:
         pprint(self.chain)
 
     def plotModel(self, name):
+        """
+        This method plots the markov chain with graphviz and displays it and saves
+        it as a gv file and a pdf file.
+        """
         g = Digraph('G', filename = name + '.gv')
 
         for prevChord in self.chain:
