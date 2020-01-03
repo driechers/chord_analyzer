@@ -121,6 +121,7 @@ class Analyzer:
         # TODO combine Gb and F# votes
 
         strippedChords = []
+        prevParts = None
         for chord in self.chords:
             parts = re.search(chordRE, chord).groups()
             if parts[1] == None:
@@ -142,6 +143,18 @@ class Analyzer:
                 # TODO should this really get a vote for each instance of a chord?
                 votes[self.__getCounterClock(parts[0])] += 1
 
+            # Look for resolutions TODO: add check for V -> I
+            if prevParts is not None:
+                # Previous Chord is dissonant ( dim, sus, or extended )
+                # TODO: are aug chords dissonant?
+                if prevParts[1] == 'dim' or prevParts[3] == 'sus' or len(prevParts[2]) > 0:
+                    # Current Chord is consonant ( not dim, special, sus, or extended)
+                    if parts[1] == '' and parts[3] == '' or len(parts[2]) == 0:
+                        # Cast vote for consonent chord
+                        votes[chord] += 1
+
+            prevParts = parts
+
         # Cast vote for first note
         votes[strippedChords[0]] += 1
         # Cast vote for last note
@@ -154,11 +167,12 @@ class Analyzer:
         # TODO cast vote for circle of fifths method
 
         sortedHistogram = sorted(histogram.items(), key=operator.itemgetter(1), reverse=True)
-        print(sortedHistogram)
+        #print(sortedHistogram)
 
-        print(self.chords)
-        #pprint(votes)
-        return max(votes)
+        #print(self.chords)
+        pprint(votes)
+        print(max(votes.items(), key=operator.itemgetter(1))[0])
+        return max(votes.items(), key=operator.itemgetter(1))[0]
 
     def analyzeChords(self):
         """
@@ -183,7 +197,7 @@ class Analyzer:
                     self.chain[prevChord][chord] = 1.
 
             prevChord = chord
-        pprint(self.chain)
+        #pprint(self.chain)
 
     def normalizeChords(self):
         """
@@ -198,7 +212,7 @@ class Analyzer:
             for chord in self.chain[prevChord]:
                 self.chain[prevChord][chord] /= total
 
-        pprint(self.chain)
+        #pprint(self.chain)
 
     def plotModel(self, name):
         """
